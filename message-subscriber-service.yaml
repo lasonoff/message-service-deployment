@@ -1,0 +1,81 @@
+apiVersion : apps/v1
+kind : Deployment
+metadata:
+  name : message-subscriber-deployment
+  labels:
+    app : message-subscriber
+    env : prod
+    owner : AndreyYaurov
+spec:
+  replicas : 1
+  selector:
+    matchLabels:
+      project: message-subscriber
+  template:
+    metadata:
+      labels:
+        project: message-subscriber
+    spec:
+      containers:
+         - name : message-subscriber
+           image: lasonoff/message-subscriber:latest
+           env:
+           -  name: KAFKA_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: kafkasecret
+                  key: server
+           -  name: KAFKA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kafkasecret
+                  key: user
+           -  name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafkasecret
+                  key: password
+           -  name: KAFKA_TOPIC
+              valueFrom:
+                secretKeyRef:
+                  name: kafkasecret
+                  key: topic
+           -  name: AGENT_LOAD_URL
+              value: "http://${MESSAGE_GENERATOR_SERVICE_SERVICE_HOST}:8888/api/v1/agents"
+           -  name: JDBC_DATABASE_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: username
+           -  name: JDBC_DATABASE_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: password
+           -  name: R2DBC_DATABASE_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: r2dbc
+           -  name: JDBC_DATABASE_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dbsecret
+                  key: jdbc
+---
+apiVersion : v1
+kind: Service
+metadata:
+  name: message-subscriber-service
+  labels:
+    env : prod
+    owner : AndreyYaurov
+spec:
+  selector:
+    project: message-subscriber
+  ports:
+    - name      : message-subscriber-api
+      protocol  : TCP
+      port      : 9999
+      targetPort: 9999
+  type: ClusterIP 
